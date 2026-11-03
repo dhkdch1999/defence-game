@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>킹덤 디펜스: 판타지 가디언즈</title>
+    <meta name="description" content="다양한 판타지 영웅들을 전장에 배치하고 강화하여 몬스터 웨이브와 보스의 습격을 막아내는 타워 디펜스 전략 게임" />
+    <meta property="og:title" content="킹덤 디펜스: 판타지 가디언즈" />
+    <meta property="og:description" content="다양한 판타지 영웅들을 전장에 배치하고 강화하여 몬스터 웨이브와 보스의 습격을 막아내는 타워 디펜스 전략 게임" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- CDN Libraries (No build tools required!) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              cinzel: ['Cinzel', 'serif'],
+              sans: ['Plus Jakarta Sans', 'Noto Sans KR', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+
+    <style>
+      body {
+        font-family: 'Plus Jakarta Sans', 'Noto Sans KR', sans-serif;
+        background-color: #0c0f17;
+        color: #e2e8f0;
+        user-select: none;
+        -webkit-user-select: none;
+        overflow-x: hidden;
+      }
+      .font-cinzel { font-family: 'Cinzel', serif; }
+      .glow-gold { box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.45); }
+      .glow-blue { box-shadow: 0 0 20px -3px rgba(59, 130, 246, 0.45); }
+      .glow-purple { box-shadow: 0 0 20px -3px rgba(168, 85, 247, 0.45); }
+      .glow-red { box-shadow: 0 0 20px -3px rgba(239, 68, 68, 0.45); }
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: #0f172a; }
+      ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+  </head>
+  <body class="bg-[#0c0f17] text-slate-100 flex flex-col h-screen w-screen overflow-hidden">
+    <!-- Top HUD Bar -->
+    <header class="w-full bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-4 py-2.5 flex items-center justify-between text-sm select-none z-20 shadow-lg">
+      <!-- Left: Stage info & Resources -->
+      <div class="flex items-center gap-4">
+        <button id="stage-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-all cursor-pointer group" title="스테이지 변경">
+          <i data-lucide="map" class="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform"></i>
+          <div class="flex flex-col text-left">
+            <span id="top-stage-name" class="text-xs font-semibold text-slate-100 font-cinzel">에메랄드 숲길</span>
+            <span id="top-stage-subtitle" class="text-[10px] text-slate-400">쉬움 · 15 웨이브</span>
+          </div>
+        </button>
+
+        <div id="top-lives-box" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-slate-800/60 border-slate-700/80 text-rose-400 transition-all" title="성채 생명력">
+          <i data-lucide="heart" class="w-4 h-4 fill-current"></i>
+          <div class="flex items-baseline gap-1">
+            <span id="top-lives-text" class="font-bold text-base font-cinzel text-slate-100">20/20</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-950/30 border border-amber-600/50 text-amber-400" title="보유 골드">
+          <i data-lucide="coins" class="w-4 h-4 fill-amber-500 text-amber-300"></i>
+          <span id="top-gold-text" class="font-bold text-base font-cinzel text-amber-200 tracking-wide">350 G</span>
+        </div>
+
+        <div class="hidden lg:flex items-center gap-3 text-xs text-slate-400 border-l border-slate-800 pl-4">
+          <div>처치: <span id="top-kills-text" class="font-semibold text-slate-200">0</span></div>
+          <div>점수: <span id="top-score-text" class="font-semibold text-amber-300">0</span></div>
+        </div>
+      </div>
+
+      <!-- Center: Wave Status & Call Wave -->
+      <div class="flex items-center gap-3">
+        <div class="flex flex-col items-center">
+          <div class="flex items-center gap-1.5 text-xs text-slate-300">
+            <i data-lucide="shield" class="w-3.5 h-3.5 text-blue-400"></i>
+            <span id="top-wave-title" class="font-semibold text-slate-100">웨이브 1 / 15</span>
+          </div>
+          <div id="top-wave-status" class="text-[11px] text-slate-400">대기 중</div>
+        </div>
+
+        <button id="call-wave-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 active:scale-95 text-slate-950 font-bold text-xs transition-all shadow-md cursor-pointer glow-gold" title="즉시 다음 웨이브를 호출하고 보너스 골드를 획득합니다">
+          <i data-lucide="fast-forward" class="w-3.5 h-3.5 fill-current"></i>
+          <span>즉시 호출 (+보너스 골드)</span>
+        </button>
+      </div>
+
+      <!-- Right: Controls -->
+      <div class="flex items-center gap-2">
+        <div class="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700">
+          <button data-speed="1" class="speed-btn px-2 py-1 text-xs font-semibold rounded transition-all cursor-pointer bg-amber-500 text-slate-950 shadow-sm">1x</button>
+          <button data-speed="2" class="speed-btn px-2 py-1 text-xs font-semibold rounded transition-all cursor-pointer text-slate-400 hover:text-slate-200">2x</button>
+          <button data-speed="4" class="speed-btn px-2 py-1 text-xs font-semibold rounded transition-all cursor-pointer text-slate-400 hover:text-slate-200">4x</button>
+        </div>
+
+        <button id="pause-btn" class="p-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all cursor-pointer" title="일시정지 (Space)">
+          <i data-lucide="pause" class="w-4 h-4"></i>
+        </button>
+
+        <button id="restart-btn" class="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-rose-400 hover:bg-slate-700 transition-all cursor-pointer" title="스테이지 재시작">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </button>
+
+        <button id="mute-btn" class="p-2 rounded-lg border border-slate-700 bg-slate-800 text-emerald-400 hover:bg-slate-700 transition-all cursor-pointer" title="음향 토글">
+          <i data-lucide="volume-2" class="w-4 h-4"></i>
+        </button>
+
+        <button id="bgm-btn" class="p-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-500 hover:bg-slate-700 transition-all cursor-pointer" title="배경음악 토글">
+          <i data-lucide="music" class="w-4 h-4"></i>
+        </button>
+
+        <button id="bestiary-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs transition-all cursor-pointer" title="도감 및 가이드">
+          <i data-lucide="book-open" class="w-4 h-4 text-amber-400"></i>
+          <span class="hidden sm:inline">도감</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Canvas Viewport -->
+    <main class="relative flex-1 flex items-center justify-center p-2 bg-slate-950/70 overflow-hidden">
+      <div class="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-800 bg-[#0c0f17] max-w-full max-h-full aspect-[16/9] flex items-center justify-center">
+        <canvas id="game-canvas" width="960" height="540" class="w-full h-full block cursor-default"></canvas>
+
+        <!-- Commander Spells Dock (Top Left) -->
+        <div class="absolute top-4 left-4 z-20 flex flex-col items-center gap-1">
+          <div id="spell-target-banner" class="hidden bg-amber-500/90 text-slate-950 font-bold text-xs px-3 py-1 rounded-full shadow-lg animate-bounce flex items-center gap-2">
+            <span>전장에 투하할 지점을 클릭하세요</span>
+            <button id="cancel-spell-btn" class="text-[10px] bg-slate-900 text-white px-1.5 py-0.5 rounded cursor-pointer hover:bg-slate-800">취소 (ESC)</button>
+          </div>
+          <div id="spells-dock-container" class="flex items-center gap-2 p-1.5 bg-slate-900/90 border border-slate-800 rounded-xl backdrop-blur-md shadow-xl"></div>
+        </div>
+
+        <!-- Unit Inspector Drawer (Top Right) -->
+        <div id="unit-inspector" class="hidden absolute right-4 top-16 w-80 bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-md p-4 text-xs select-none z-30">
+          <div class="flex items-start justify-between border-b border-slate-800 pb-2 mb-3">
+            <div class="flex items-center gap-2.5">
+              <div id="insp-avatar" class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-md relative">
+                <div class="w-5 h-5 rounded-full"></div>
+                <span id="insp-badge" class="absolute -bottom-1 -right-1 bg-slate-950 border border-slate-700 text-[10px] px-1 rounded font-bold text-amber-300">Lv.1</span>
+              </div>
+              <div>
+                <h3 id="insp-name" class="font-bold text-sm text-slate-100 font-cinzel">수호자 이름</h3>
+                <p id="insp-title" class="text-[11px] text-slate-400">호칭</p>
+              </div>
+            </div>
+            <button id="insp-close-btn" class="text-slate-400 hover:text-slate-100 p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <div class="bg-slate-950/60 border border-slate-800/80 p-2 rounded-xl flex items-center gap-2">
+              <i data-lucide="sword" class="w-4 h-4 text-rose-400"></i>
+              <div>
+                <div class="text-[10px] text-slate-400">공격력 (DPS)</div>
+                <div id="insp-dmg" class="font-bold text-slate-100 text-sm">0</div>
+              </div>
+            </div>
+            <div class="bg-slate-950/60 border border-slate-800/80 p-2 rounded-xl flex items-center gap-2">
+              <i data-lucide="crosshair" class="w-4 h-4 text-emerald-400"></i>
+              <div>
+                <div class="text-[10px] text-slate-400">사거리</div>
+                <div id="insp-range" class="font-bold text-slate-100 text-sm">0 px</div>
+              </div>
+            </div>
+            <div class="bg-slate-950/60 border border-slate-800/80 p-2 rounded-xl flex items-center gap-2">
+              <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+              <div>
+                <div class="text-[10px] text-slate-400">공격 속도</div>
+                <div id="insp-speed" class="font-bold text-slate-100 text-sm">0/s</div>
+              </div>
+            </div>
+            <div class="bg-slate-950/60 border border-slate-800/80 p-2 rounded-xl flex items-center gap-2">
+              <i data-lucide="trophy" class="w-4 h-4 text-purple-400"></i>
+              <div>
+                <div class="text-[10px] text-slate-400">처치 수</div>
+                <div id="insp-kills" class="font-bold text-slate-100 text-sm">0 회</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-950/40 border border-slate-800/60 p-2 rounded-xl mb-3 flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-slate-400 text-[11px]">
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-blue-400"></i>
+              <span>누적 입힌 피해량</span>
+            </div>
+            <span id="insp-total-dmg" class="font-bold text-slate-200 font-cinzel">0</span>
+          </div>
+
+          <div class="mb-3">
+            <div class="text-[11px] font-semibold text-slate-300 mb-1.5">우선 타겟 지정</div>
+            <div class="grid grid-cols-4 gap-1">
+              <button data-priority="first" class="priority-btn py-1 rounded-lg text-center font-semibold text-[11px] transition-all cursor-pointer bg-amber-500 text-slate-950 shadow">선두</button>
+              <button data-priority="strongest" class="priority-btn py-1 rounded-lg text-center font-semibold text-[11px] transition-all cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300">최강</button>
+              <button data-priority="closest" class="priority-btn py-1 rounded-lg text-center font-semibold text-[11px] transition-all cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300">최근접</button>
+              <button data-priority="last" class="priority-btn py-1 rounded-lg text-center font-semibold text-[11px] transition-all cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300">후미</button>
+            </div>
+          </div>
+
+          <div class="bg-amber-950/20 border border-amber-900/30 rounded-xl p-2 mb-3">
+            <div id="insp-ability-title" class="text-[10px] font-bold text-amber-400 flex items-center gap-1 mb-0.5">각성 스킬</div>
+            <div id="insp-ability-desc" class="text-[11px] text-amber-200/90 leading-tight">설명</div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-1 border-t border-slate-800">
+            <button id="insp-upgrade-btn" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-bold transition-all cursor-pointer shadow-md bg-amber-600 hover:bg-amber-500 text-slate-950 glow-gold"></button>
+            <button id="insp-sell-btn" class="flex items-center gap-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-rose-950/50 hover:text-rose-400 border border-slate-700 text-slate-300 transition-all cursor-pointer" title="수호자를 회수하고 골드 70%를 환급받습니다">
+              <i data-lucide="trash-2" class="w-4 h-4 text-rose-400"></i>
+              <div class="flex flex-col text-left leading-none">
+                <span class="text-xs">판매</span>
+                <span id="insp-sell-refund" class="text-[9px] text-amber-400">+0G</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Pause Overlay -->
+        <div id="pause-overlay" class="hidden absolute inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center pointer-events-none">
+          <div class="bg-slate-900/90 border border-slate-700 px-6 py-3 rounded-2xl shadow-2xl text-center">
+            <span class="text-xl font-bold font-cinzel text-amber-400">일시정지</span>
+            <p class="text-xs text-slate-400 mt-1">스페이스바를 눌러 게임을 재개하세요</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Guardian Summon Shelf -->
+    <footer class="w-full bg-slate-900/80 border-t border-slate-800/80 p-2 flex items-center justify-center backdrop-blur-md z-20 relative">
+      <div id="unit-dock-tooltip" class="hidden absolute -top-36 bg-slate-900/95 border border-slate-700 rounded-xl p-3 shadow-2xl backdrop-blur-md w-72 text-xs pointer-events-none z-30"></div>
+      <div id="guardian-dock-shelf" class="flex items-center gap-2 p-2 bg-slate-900/90 border border-slate-800 rounded-2xl backdrop-blur-md shadow-2xl"></div>
+    </footer>
+
+    <!-- Bestiary Modal -->
+    <div id="bestiary-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md select-none">
+      <div class="relative w-full max-w-3xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/40">
+          <div>
+            <h2 class="text-lg font-bold text-slate-100 font-cinzel">왕국 수호록 & 몬스터 도감</h2>
+            <p class="text-xs text-slate-400">가디언의 특성과 침공해오는 몬스터들의 약점을 분석하세요</p>
+          </div>
+          <button id="bestiary-close-btn" class="text-slate-400 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <div class="flex items-center border-b border-slate-800 px-6 gap-2 bg-slate-900">
+          <button data-tab="guardians" class="bestiary-tab-btn flex items-center gap-1.5 py-3 px-4 font-semibold text-xs border-b-2 border-amber-500 text-amber-400 cursor-pointer">
+            <i data-lucide="shield" class="w-4 h-4"></i>
+            <span>수호자 영웅들</span>
+          </button>
+          <button data-tab="enemies" class="bestiary-tab-btn flex items-center gap-1.5 py-3 px-4 font-semibold text-xs border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer">
+            <i data-lucide="skull" class="w-4 h-4"></i>
+            <span>침공 몬스터군</span>
+          </button>
+          <button data-tab="tips" class="bestiary-tab-btn flex items-center gap-1.5 py-3 px-4 font-semibold text-xs border-b-2 border-transparent text-slate-400 hover:text-slate-200 cursor-pointer">
+            <i data-lucide="lightbulb" class="w-4 h-4"></i>
+            <span>전략 전술 가이드</span>
+          </button>
+        </div>
+
+        <div class="p-6 overflow-y-auto space-y-4">
+          <div id="bestiary-tab-guardians" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+          <div id="bestiary-tab-enemies" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+          <div id="bestiary-tab-tips" class="hidden space-y-3 text-xs text-slate-300 leading-relaxed">
+            <div class="bg-slate-800/80 border border-slate-700 p-3.5 rounded-xl">
+              <h4 class="font-bold text-amber-400 text-sm mb-1">1. 원소 시너지와 감속 연계</h4>
+              <p><strong>빙결 드루이드</strong>의 냉기 탄환으로 적의 이동속도를 늦추면, <strong>대마법사</strong>의 화염구와 <strong>비룡</strong>의 화염 브레스가 적에게 머무는 시간이 길어져 입히는 누적 피해량이 폭발적으로 상승합니다.</p>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 p-3.5 rounded-xl">
+              <h4 class="font-bold text-amber-400 text-sm mb-1">2. 성기사의 신성 오라</h4>
+              <p><strong>성기사</strong>를 레벨 3으로 승급(각성)시키면 주변 반경에 있는 모든 가디언 영웅들의 공격력이 +25% 증가합니다. 딜러들이 밀집된 요충지에 성기사를 배치하여 화력을 극대화하세요.</p>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 p-3.5 rounded-xl">
+              <h4 class="font-bold text-amber-400 text-sm mb-1">3. 보스 및 하피 대응</h4>
+              <p><strong>하피</strong>는 공중 유닛으로 지상 전용 근접 공격을 받지 않습니다. 엘프 궁수나 대마법사를 미리 육성해두어야 방어선이 뚫리지 않습니다. 보스전에서는 <strong>그림자 암살자</strong>의 방어력 관통 독 공격과 <strong>메테오 스트라이크</strong>가 필수적입니다.</p>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 p-3.5 rounded-xl">
+              <h4 class="font-bold text-amber-400 text-sm mb-1">4. 웨이브 즉시 호출 보너스</h4>
+              <p>자신이 있다면 다음 웨이브를 기다리지 않고 상단의 [즉시 호출] 버튼을 눌러 추가 보너스 골드를 챙기세요. 초반 스노우볼링에 큰 도움이 됩니다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage Select Modal -->
+    <div id="stage-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md select-none">
+      <div class="relative w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/40">
+          <div class="flex items-center gap-2">
+            <i data-lucide="map" class="w-5 h-5 text-amber-400"></i>
+            <div>
+              <h2 class="text-lg font-bold text-slate-100 font-cinzel">전장 스테이지 선택</h2>
+              <p class="text-xs text-slate-400">수호할 영지를 선택하여 원정을 시작하세요</p>
+            </div>
+          </div>
+          <button id="stage-close-btn" class="text-slate-400 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div id="stage-list-container" class="p-6 space-y-3"></div>
+      </div>
+    </div>
+
+    <!-- Game Over / Victory Modal -->
+    <div id="game-over-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md select-none">
+      <div class="relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden p-6 text-center">
+        <div id="game-over-icon-box" class="w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-4 shadow-xl border-2"></div>
+        <h2 id="game-over-title" class="text-2xl font-bold font-cinzel text-slate-100 tracking-wide mb-1">결과 타이틀</h2>
+        <p id="game-over-desc" class="text-xs text-slate-400 mb-6">설명 텍스트</p>
+
+        <div class="grid grid-cols-2 gap-2.5 bg-slate-950/60 border border-slate-800 p-3.5 rounded-2xl mb-4 text-xs">
+          <div class="flex flex-col items-center">
+            <span class="text-slate-400 text-[11px]">방어한 웨이브</span>
+            <span id="go-waves" class="text-base font-bold text-slate-100 font-cinzel">0 / 0</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <span class="text-slate-400 text-[11px]">총 처치 수</span>
+            <span id="go-kills" class="text-base font-bold text-slate-100 font-cinzel">0 마리</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <span class="text-slate-400 text-[11px]">최종 점수</span>
+            <span id="go-score" class="text-base font-bold text-amber-400 font-cinzel">0</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <span class="text-slate-400 text-[11px]">배치한 수호자</span>
+            <span id="go-guardians" class="text-base font-bold text-slate-100 font-cinzel">0 명</span>
+          </div>
+        </div>
+
+        <div id="go-mvp-card" class="hidden bg-amber-950/20 border border-amber-900/40 rounded-2xl p-3 mb-6 flex items-center justify-between text-left">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+              <i data-lucide="award" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="text-[10px] text-amber-400 font-bold uppercase tracking-wider">전투 MVP 가디언</div>
+              <div id="go-mvp-name" class="text-xs font-bold text-slate-100 font-cinzel">이름</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] text-slate-400">누적 피해량</div>
+            <div id="go-mvp-dmg" class="text-xs font-bold text-amber-300 font-cinzel">0</div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <button id="go-next-stage-btn" class="hidden w-full py-3 px-4 rounded-xl font-bold text-sm bg-amber-600 hover:bg-amber-500 active:scale-95 text-slate-950 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg glow-gold">
+            <span>다음 스테이지로 진격</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+          <div class="flex items-center gap-2">
+            <button id="go-restart-btn" class="flex-1 py-2.5 px-4 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all cursor-pointer flex items-center justify-center gap-1.5">
+              <i data-lucide="rotate-ccw" class="w-4 h-4 text-emerald-400"></i>
+              <span>다시 도전</span>
+            </button>
+            <button id="go-stage-list-btn" class="flex-1 py-2.5 px-4 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all cursor-pointer flex items-center justify-center gap-1.5">
+              <i data-lucide="map" class="w-4 h-4 text-blue-400"></i>
+              <span>전장 목록</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Game Script -->
+    <script src="./script.js"></script>
+  </body>
+</html>
